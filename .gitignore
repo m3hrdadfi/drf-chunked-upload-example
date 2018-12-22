@@ -1,0 +1,12 @@
+# End of https://www.gitignore.io/api/pycharm,python,django
+*.sqlite3
+*.pyc
+
+!media/
+media/chunked_uploads
+media/uploads
+.DS_Store
+.idea
+!uploads/migrations/
+uploads/migrations/0001_initial.py
+drf_chunked_upload

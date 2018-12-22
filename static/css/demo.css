@@ -1,0 +1,21 @@
+html {
+    margin: 0 auto;
+    max-width: 1000px;
+}
+
+body {
+    color: #5A5A5A;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.title {
+    text-align: center;
+}
+
+.output {
+    background: #eee;
+    padding: 10px 20px;
+    overflow-y: auto;
+    max-height: 300px;
+}

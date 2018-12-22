@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+
+{% block content %}
+    <h1 class="title">
+        drf-chunked-upload
+    </h1>
+    {% csrf_token %}
+
+
+    <h3 class="title">
+        drf-chunked-upload Type 1 <br>
+        <strong>['image/png', 'image/jpg', 'image/jpeg']</strong>
+    </h3>
+    <input id="chunked_upload_type_1" type="file" name="file">
+    <p id="progress_type_1"></p>
+    <div class="output" id="messages_type_1"></div>
+
+    <h3 class="title">
+        drf-chunked-upload Type 2 <br>
+        <strong>['video/mp4']</strong>
+    </h3>
+
+    <input id="chunked_upload_type_2" type="file" name="file">
+    <p id="progress_type_2"></p>
+    <div class="output" id="messages_type_2"></div>
+{% endblock %}
+
+
+{% block javascript %}
+    <!-- place project specific Javascript in this file -->
+    <script src="{% static 'js/jquery.js' %}"></script>
+    <script src="{% static 'js/jquery.ui.widget.js' %}"></script>
+    <!-- The Iframe Transport is required for browsers without support for XHR file uploads -->
+    <script src="{% static 'js/jquery.iframe-transport.js' %}"></script>
+    <!-- The basic File Upload plugin -->
+    <script src="{% static 'js/jquery.fileupload.js' %}"></script>
+    <!-- Calculate md5 -->
+    <script src="{% static 'js/spark-md5.js' %}"></script>
+
+    <script type="text/javascript">
+        var md5 = "",
+            csrf = $('[name="csrfmiddlewaretoken"]').attr('value'),
+            form_data = [];
+
+        function calculate_md5(data, chunk_size) {
+            var blob_slice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice,
+                file = data.files[0],
+                chunks = Math.ceil(file.size / chunk_size),
+                current_chunk = 0,
+                spark = new SparkMD5.ArrayBuffer(),
+                fileReader = new FileReader();
+
+            fileReader.onload = function (e) {
+                console.log('read chunk nr', current_chunk + 1, 'of', chunks);
+                spark.append(e.target.result);                   // Append array buffer
+                current_chunk++;
+
+                if (current_chunk < chunks) {
+                    read_next_chunk();
+                } else {
+                    data.submit();
+                    md5 = spark.end();
+                    console.log('finished loading');
+                    console.info('computed hash', md5);  // Compute hash
+                }
+            };
+            fileReader.onerror = function () {
+                console.warn('oops, something went wrong.');
+            };
+
+            function read_next_chunk() {
+                var start = current_chunk * chunk_size,
+                    end = Math.min(start + chunk_size, file.size);
+                {#end = ((start + chunk_size) >= file.size) ? file.size : start + chunk_size;#}
+                fileReader.readAsArrayBuffer(blob_slice.call(file, start, end));
+            };
+
+            read_next_chunk();
+        }
+
+        var chunk_size = 1000000; // Chunks of 100 kB
+
+        $("#chunked_upload_type_1").fileupload({
+            url: "{% url 'uploads:upload-type-1-list' %}",
+            type: "PUT",
+            dataType: "json",
+            maxChunkSize: chunk_size,
+            formData: form_data,
+            headers: {
+                'X-CSRFToken': csrf
+            },
+            add: function (e, data) { // Called before starting upload
+                $("#messages_type_1").empty();
+                // If this is the second file you're uploading we need to remove the
+                // old upload_id and just keep the csrftoken (which is always first).
+                form_data.splice(1);
+                calculate_md5(data, chunk_size);  // Again, chunks of 100 kB
+            },
+            chunkdone: function (e, data) { // Called after uploading each chunk
+                if (form_data.length < 2) {
+                    form_data.push(
+                        {"name": 'upload_id', "value": data.result.id}
+                    );
+                }
+                $("#messages_type_1").append($('<p>').text(JSON.stringify(data.result)));
+                var progress = parseInt(data.loaded / data.total * 100.0, 10);
+                $("#progress_type_1").text(Array(progress).join("=") + "> " + progress + "%");
+            },
+            done: function (e, data) { // Called when the file has completely uploaded
+                $.ajax({
+                    type: "POST",
+                    url: data.result.url,
+                    data: {md5: md5},
+                    headers: {
+                        'X-CSRFToken': csrf
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        $("#messages_type_1").append($('<p>').text(JSON.stringify(data)));
+                    }
+                });
+            },
+            fail: function (e, data) {
+                $("#messages_type_1").append($('<p>').text(JSON.stringify(data.jqXHR.responseJSON)));
+            }
+        });
+
+        $("#chunked_upload_type_2").fileupload({
+            url: "{% url 'uploads:upload-type-2-list' %}",
+            type: "PUT",
+            dataType: "json",
+            maxChunkSize: chunk_size,
+            formData: form_data,
+            headers: {
+                'X-CSRFToken': csrf
+            },
+            add: function (e, data) { // Called before starting upload
+                $("#messages_type_2").empty();
+                // If this is the second file you're uploading we need to remove the
+                // old upload_id and just keep the csrftoken (which is always first).
+                form_data.splice(1);
+                calculate_md5(data, chunk_size);  // Again, chunks of 100 kB
+            },
+            chunkdone: function (e, data) { // Called after uploading each chunk
+                if (form_data.length < 2) {
+                    form_data.push(
+                        {"name": 'upload_id', "value": data.result.id}
+                    );
+                }
+                $("#messages_type_2").append($('<p>').text(JSON.stringify(data.result)));
+                var progress = parseInt(data.loaded / data.total * 100.0, 10);
+                $("#progress_type_2").text(Array(progress).join("=") + "> " + progress + "%");
+            },
+            done: function (e, data) { // Called when the file has completely uploaded
+                $.ajax({
+                    type: "POST",
+                    url: data.result.url,
+                    data: {md5: md5},
+                    headers: {
+                        'X-CSRFToken': csrf
+                    },
+                    dataType: "json",
+                    success: function (data) {
+                        $("#messages_type_2").append($('<p>').text(JSON.stringify(data)));
+                    }
+                });
+            },
+            fail: function (e, data) {
+                $("#messages_type_2").append($('<p>').text(JSON.stringify(data.jqXHR.responseJSON)));
+            }
+        });
+    </script>
+{% endblock %}
