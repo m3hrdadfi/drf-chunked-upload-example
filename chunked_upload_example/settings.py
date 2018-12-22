@@ -84,6 +84,14 @@ WSGI_APPLICATION = 'chunked_upload_example.wsgi.application'
 
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'drf',
+        'USER': 'drf',
+        'PASSWORD': 'drf',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
+    },
+    'default2': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }

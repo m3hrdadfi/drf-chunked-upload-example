@@ -8,6 +8,16 @@
     </h1>
     {% csrf_token %}
 
+    <p>
+        <label for="owner_type">Owner Type</label>
+        <input id="owner_type" type="text" name="owner_type" disabled="true" value="3 - User">
+        <br>
+        <small>Change this amount to fit your content type. (in this case User model: 3)</small>
+    </p>
+    <p>
+        <label for="owner_id">Owner ID &nbsp;</label>
+        <input id="owner_id" type="text" name="owner_id" disabled="true" value="1">
+    </p>
 
     <h3 class="title">
         drf-chunked-upload Type 1 <br>
@@ -42,7 +52,11 @@
     <script type="text/javascript">
         var md5 = "",
             csrf = $('[name="csrfmiddlewaretoken"]').attr('value'),
-            form_data = [];
+            form_data = [
+                {'name': 'owner_type', 'value': 3},
+                {'name': 'owner_id', 'value': 1}
+            ];
+
 
         function calculate_md5(data, chunk_size) {
             var blob_slice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice,
@@ -73,7 +87,6 @@
             function read_next_chunk() {
                 var start = current_chunk * chunk_size,
                     end = Math.min(start + chunk_size, file.size);
-                {#end = ((start + chunk_size) >= file.size) ? file.size : start + chunk_size;#}
                 fileReader.readAsArrayBuffer(blob_slice.call(file, start, end));
             };
 
@@ -93,13 +106,11 @@
             },
             add: function (e, data) { // Called before starting upload
                 $("#messages_type_1").empty();
-                // If this is the second file you're uploading we need to remove the
-                // old upload_id and just keep the csrftoken (which is always first).
-                form_data.splice(1);
-                calculate_md5(data, chunk_size);  // Again, chunks of 100 kB
+                form_data.splice(2);
+                calculate_md5(data, chunk_size);
             },
             chunkdone: function (e, data) { // Called after uploading each chunk
-                if (form_data.length < 2) {
+                if (form_data.length < 3) {
                     form_data.push(
                         {"name": 'upload_id', "value": data.result.id}
                     );
@@ -112,7 +123,9 @@
                 $.ajax({
                     type: "POST",
                     url: data.result.url,
-                    data: {md5: md5},
+                    data: {
+                        md5: md5
+                    },
                     headers: {
                         'X-CSRFToken': csrf
                     },
